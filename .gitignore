@@ -1,0 +1,8 @@
+# Local artifacts
+node_modules/
+*.tmp
+*.bak
+acceptance/
+.lyrics-populator-state.json
+.lyrics-populator.log.jsonl
+.lyrics-populator.lock
