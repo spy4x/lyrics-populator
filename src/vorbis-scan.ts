@@ -8,7 +8,7 @@ export interface VorbisCommentScan {
   fields: Record<string, string>
 }
 
-function readU32LE(buf: Uint8Array, off: number): number {
+export function readU32LE(buf: Uint8Array, off: number): number {
   return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | ((buf[off + 3] << 24) >>> 0)
 }
 
