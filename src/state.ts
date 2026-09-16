@@ -2,6 +2,8 @@
 import { dirname, join } from "@std/path"
 import { encodeHex } from "@std/encoding/hex"
 
+// Legacy lyrics-focused enum. Kept for backwards-compat with old state files.
+// New code uses FieldStatus (string union).
 export enum LyricsStatus {
   NoLyrics = 1,
   Preexisted = 2,
@@ -13,8 +15,72 @@ export enum LyricsStatus {
   MissingMetadata = 8,
 }
 
+// Fields the script can populate from external sources.
+export type FieldName =
+  | "artist"
+  | "title"
+  | "album"
+  | "albumArtist"
+  | "date"
+  | "trackNumber"
+  | "discNumber"
+  | "genre"
+  | "composer"
+  | "lyrics"
+  | "coverArt"
+  | "replayGain" // declared for forward-compat; not fetched in Phase 1
+
+export type FieldStatus =
+  | "not-fetched" // never tried
+  | "fetch-miss" // tried, no result from any source
+  | "fetched" // populated from a source
+  | "manual" // user provided
+  | "skipped" // format doesn't support this field
+  | "preexisted" // already present in file, left alone
+  | "fetch-failed" // error during fetch (network etc), retryable
+
+export interface FieldState {
+  status: FieldStatus
+  source: string | null // "musicbrainz" | "lrclib" | "manual" | etc.
+  url: string | null
+  attempts: number
+  lastError: string | null
+  matchedScore: number | null // 0..1 fuzzy match confidence
+  preview?: string // first 200 chars for text fields, dimensions for coverArt
+}
+
+export const ALL_FIELDS: readonly FieldName[] = [
+  "artist",
+  "title",
+  "album",
+  "albumArtist",
+  "date",
+  "trackNumber",
+  "discNumber",
+  "genre",
+  "composer",
+  "lyrics",
+  "coverArt",
+  "replayGain",
+] as const
+
+export function defaultFields(): Record<FieldName, FieldState> {
+  const out = {} as Record<FieldName, FieldState>
+  for (const f of ALL_FIELDS) {
+    out[f] = {
+      status: "not-fetched",
+      source: null,
+      url: null,
+      attempts: 0,
+      lastError: null,
+      matchedScore: null,
+    }
+  }
+  return out
+}
+
 export interface SourceAttempt {
-  source: "lrclib" | "ovh"
+  source: string
   at: string
   ok: boolean
   matchedTitle?: string
@@ -23,10 +89,50 @@ export interface SourceAttempt {
   error?: string
 }
 
+// Legacy populatedFrom shape, kept on Entry for backwards compat.
+export interface PopulatedFromLegacy {
+  source: string
+  url: string
+  plain: string
+  synced: boolean
+}
+
+// Tag values currently held in file (after last write). Read from music-metadata
+// or vorbis scan + written into the file by the writer.
+export interface TagValues {
+  artist: string
+  title: string
+  album: string
+  albumArtist: string
+  date: string
+  trackNumber: number | null
+  discNumber: number | null
+  genre: string
+  composer: string
+  lyricsPreview: string
+}
+
+export function defaultTagValues(): TagValues {
+  return {
+    artist: "",
+    title: "",
+    album: "",
+    albumArtist: "",
+    date: "",
+    trackNumber: null,
+    discNumber: null,
+    genre: "",
+    composer: "",
+    lyricsPreview: "",
+  }
+}
+
 export interface Entry {
   relpath: string
   absPath: string
   ext: string
+  // Top-level fields kept for backwards compat with v1 state files. New code
+  // prefers entry.tags.* + entry.fields.*.
   artist: string
   title: string
   album: string
@@ -38,16 +144,14 @@ export interface Entry {
   lastAttemptAt: string | null
   lastError: string | null
   sourcesTried: SourceAttempt[]
-  populatedFrom: {
-    source: "lrclib" | "ovh" | "manual"
-    url: string
-    plain: string
-    synced: boolean
-  } | null
+  populatedFrom: PopulatedFromLegacy | null
+  // New in v2.
+  tags: TagValues
+  fields: Record<FieldName, FieldState>
 }
 
 export interface StateFile {
-  version: 1
+  version: 2
   createdAt: string
   updatedAt: string
   targetPath: string
@@ -55,7 +159,7 @@ export interface StateFile {
   entries: Record<string, Entry>
 }
 
-const STATE_VERSION = 1 as const
+const STATE_VERSION = 2 as const
 
 export function statePathFor(folderAbs: string): string {
   return join(folderAbs, ".lyrics-populator-state.json")
@@ -81,22 +185,85 @@ export function emptyState(targetPath: string): StateFile {
   }
 }
 
+// Backwards-compat migration: read a v1 or v2 state file. v1 entries get
+// populatedFrom migrated into fields.lyrics, and missing top-level fields
+// get filled in with defaults.
 export function loadState(folderAbs: string): StateFile {
   const path = statePathFor(folderAbs)
+  let parsed: StateFile
   try {
     const text = Deno.readTextFileSync(path)
-    const parsed = JSON.parse(text) as StateFile
-    if (parsed.version !== STATE_VERSION) {
-      console.warn(
-        `state: version mismatch (got ${parsed.version}, want ${STATE_VERSION}); starting fresh`,
-      )
-      return emptyState(folderAbs)
-    }
-    return parsed
+    parsed = JSON.parse(text) as StateFile
   } catch (e) {
     if (e instanceof Deno.errors.NotFound) return emptyState(folderAbs)
     throw e
   }
+
+  // Version bump: v1 → v2 (add tags + fields, migrate populatedFrom).
+  if ((parsed.version as unknown) === 1) {
+    parsed.version = 2
+    for (const k of Object.keys(parsed.entries)) {
+      const e = parsed.entries[k]
+      e.tags = {
+        artist: e.artist ?? "",
+        title: e.title ?? "",
+        album: e.album ?? "",
+        albumArtist: "",
+        date: "",
+        trackNumber: null,
+        discNumber: null,
+        genre: "",
+        composer: "",
+        lyricsPreview: e.populatedFrom?.plain ?? "",
+      }
+      e.fields = defaultFields()
+      // Migrate populatedFrom → fields.lyrics. Even when populatedFrom is null
+      // (e.g. PopulateFailed without ever getting a result), carry the
+      // legacy status over to fields.lyrics so we don't lose retry state.
+      const legacyStatus = ((): FieldStatus => {
+        switch (e.status) {
+          case LyricsStatus.Populated:
+            return "fetched"
+          case LyricsStatus.Preexisted:
+            return "preexisted"
+          case LyricsStatus.PopulateFailed:
+            return "fetch-failed"
+          case LyricsStatus.DryRunWouldPopulate:
+            return "fetched"
+          default:
+            return "not-fetched"
+        }
+      })()
+      if (e.populatedFrom) {
+        e.fields.lyrics = {
+          status: legacyStatus,
+          source: e.populatedFrom.source,
+          url: e.populatedFrom.url || null,
+          attempts: e.attempts,
+          lastError: e.lastError,
+          matchedScore: null,
+          preview: e.populatedFrom.plain.slice(0, 200),
+        }
+      } else {
+        e.fields.lyrics = {
+          ...defaultFields().lyrics,
+          status: legacyStatus,
+          attempts: e.attempts,
+          lastError: e.lastError,
+        }
+      }
+    }
+  }
+
+  // Defensive: ensure all v2 entries have tags + fields even if loaded from a
+  // partially-written future-format file.
+  for (const k of Object.keys(parsed.entries)) {
+    const e = parsed.entries[k]
+    if (!e.tags) e.tags = defaultTagValues()
+    if (!e.fields) e.fields = defaultFields()
+  }
+
+  return parsed
 }
 
 // In-process mutex + file lock around a folder.
