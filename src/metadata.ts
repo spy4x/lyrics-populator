@@ -78,7 +78,9 @@ export async function readTags(absPath: string, explicitExt?: string): Promise<A
         const buf = new Uint8Array(limit)
         await f.read(buf)
         const scan = scanOggComments(buf)
-        if (!albumArtist) albumArtist = scan.fields["ALBUMARTIST"] ?? scan.fields["ALBUM ARTIST"] ?? ""
+        if (!albumArtist) {
+          albumArtist = scan.fields["ALBUMARTIST"] ?? scan.fields["ALBUM ARTIST"] ?? ""
+        }
         if (!composer) composer = scan.fields["COMPOSER"] ?? ""
       } finally {
         try {
@@ -392,7 +394,9 @@ async function writeOggMetadata(
   // source has multi-stream video. For Phase 1 we accept this limitation
   // and document it.)
   if (payload.coverArt && ext === "flac") {
-    const coverPath = `${tmpPath}.cover.${payload.coverArt.mimeType === "image/png" ? "png" : "jpg"}`
+    const coverPath = `${tmpPath}.cover.${
+      payload.coverArt.mimeType === "image/png" ? "png" : "jpg"
+    }`
     try {
       await Deno.writeFile(coverPath, payload.coverArt.bytes)
       const ffmpegBin = await findFfmpeg()
@@ -416,7 +420,9 @@ async function writeOggMetadata(
       await safeUnlink(coverPath)
       if (!result.success) {
         return new Error(
-          `ffmpeg attach failed: ${new TextDecoder().decode(result.stderr).split("\n").slice(-3).join("\n")}`,
+          `ffmpeg attach failed: ${
+            new TextDecoder().decode(result.stderr).split("\n").slice(-3).join("\n")
+          }`,
         )
       }
       await Deno.remove(tmpPath)
@@ -430,12 +436,13 @@ async function writeOggMetadata(
   return null
 }
 
-function escapeVorbis(s: string): string {
-  // Escape special chars: backslash, =, ;, #, newlines (literal LF in arg).
-  // We pass newlines as real \n characters via Deno.Command (no shell), and
-  // ffmpeg writes them as-is to the vorbis block.
+// Escape helper for vorbis comment values. Currently unused — the pure-TS
+// vorbis writer handles escaping internally. Kept for reference / future
+// use if a CLI-tool fallback path is added.
+function _escapeVorbis(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/=/g, "\\=").replace(/;/g, "\\;").replace(/#/g, "\\#")
 }
+void _escapeVorbis // silence unused warning
 
 let cachedFfmpegPath: string | null = null
 async function findFfmpeg(): Promise<string> {
@@ -510,8 +517,7 @@ async function verifyWriteMetadata(
   if (delta < -maxLoss || delta > maxGain) {
     return {
       ok: false,
-      error:
-        `verification: size delta ${delta} out of range (loss ${maxLoss}, gain ${maxGain})`,
+      error: `verification: size delta ${delta} out of range (loss ${maxLoss}, gain ${maxGain})`,
     }
   }
 

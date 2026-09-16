@@ -49,7 +49,8 @@ function findVorbisCommentPage(
   let i = 0
   while (i < bytes.length - 27) {
     if (
-      bytes[i] === 0x4f && bytes[i + 1] === 0x67 && bytes[i + 2] === 0x67 && bytes[i + 3] === 0x53 &&
+      bytes[i] === 0x4f && bytes[i + 1] === 0x67 && bytes[i + 2] === 0x67 &&
+      bytes[i + 3] === 0x53 &&
       bytes[i + 4] === 0
     ) {
       const nsegs = bytes[i + 26]
@@ -219,7 +220,7 @@ function packOggPage(
 // overrides is a map of key -> new value. Keys already present are replaced;
 // new keys are appended. All other existing entries are kept as-is.
 function applyOverrides(
-  vendor: string,
+  _vendor: string,
   entries: CommentEntry[],
   overrides: Map<string, string>,
   _preserveKeys: Set<string>,

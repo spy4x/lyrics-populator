@@ -2,20 +2,10 @@
 // Old per-source fetchLyrics (lyrics-only) kept as thin wrapper for backwards
 // compatibility with callers that haven't migrated yet.
 
-import {
-  lrclibGet,
-  lrclibSearch,
-  type LrcResult,
-} from "./lrclib.ts"
+import { lrclibGet, lrclibSearch, type LrcResult } from "./lrclib.ts"
 import { ovhGet, type OvhResult } from "./ovh.ts"
-import {
-  musicbrainzSearchRecording,
-  type MusicBrainzResult,
-} from "./musicbrainz.ts"
-import {
-  coverartarchiveGetFront,
-  type CoverArtResult,
-} from "./coverartarchive.ts"
+import { type MusicBrainzResult, musicbrainzSearchRecording } from "./musicbrainz.ts"
+import type { CoverArtResult } from "./coverartarchive.ts"
 
 export type SourceName = "lrclib" | "ovh" | "musicbrainz" | "coverartarchive" | "manual"
 

@@ -3,8 +3,7 @@
 import { RateLimiter } from "./rate-limiter.ts"
 
 const caaLimiter = new RateLimiter({ requestsPerSecond: 1 })
-const USER_AGENT =
-  "lyrics-populator/0.1 ( https://github.com/spy4x/lyrics-populator )"
+const USER_AGENT = "lyrics-populator/0.1 ( https://github.com/spy4x/lyrics-populator )"
 
 const BASE = "https://coverartarchive.org"
 

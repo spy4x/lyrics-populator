@@ -76,9 +76,7 @@ Deno.test("coverartarchiveGetFront falls back to first image when none is front"
 })
 
 Deno.test("coverartarchiveGetFront returns null when index has no images", async () => {
-  stubFetch(() =>
-    new Response(JSON.stringify({ images: [] }), { status: 200 })
-  )
+  stubFetch(() => new Response(JSON.stringify({ images: [] }), { status: 200 }))
   const r = await coverartarchiveGetFront("mbid")
   assertEquals(r, null)
 })

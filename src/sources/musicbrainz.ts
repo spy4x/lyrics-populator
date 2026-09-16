@@ -8,8 +8,7 @@ const mbLimiter = new RateLimiter({ requestsPerSecond: 1 })
 
 // User-Agent identifying this tool. MusicBrainz requires it; abusive UAs
 // get banned. Update the version when publishing releases.
-const USER_AGENT =
-  "lyrics-populator/0.1 ( https://github.com/spy4x/lyrics-populator )"
+const USER_AGENT = "lyrics-populator/0.1 ( https://github.com/spy4x/lyrics-populator )"
 
 const BASE = "https://musicbrainz.org/ws/2"
 

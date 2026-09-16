@@ -9,9 +9,9 @@
 [![LRCLib](https://img.shields.io/badge/source-LRCLib-blue)](https://lrclib.net)
 [![lyrics.ovh](https://img.shields.io/badge/source-lyrics.ovh-blue)](https://lyrics.ovh)
 
-Built to replace hours of manual Kid3 work on a personal music archive. Drop it in
-a folder, run, come back later — lyrics are filled in for whatever the open web
-knows about, and a JSON DB tracks progress so it can pick up exactly where it left off.
+Built to replace hours of manual Kid3 work on a personal music archive. Drop it in a folder, run,
+come back later — lyrics are filled in for whatever the open web knows about, and a JSON DB tracks
+progress so it can pick up exactly where it left off.
 
 ## Features
 
@@ -19,7 +19,8 @@ knows about, and a JSON DB tracks progress so it can pick up exactly where it le
 - ⚡ **Atomic writes**: copy → write → verify → rename. Original is never at risk
 - 🔁 **Idempotent + resumable**: state file tracks per-file status. Safe to re-run any time
 - 🚦 **Single-instance**: `flock` on `.lyrics-populator.lock` prevents double-runs
-- 📦 **Manual override**: `--manual-lyrics <dir>` injects lyrics for tracks the open web doesn't have
+- 📦 **Manual override**: `--manual-lyrics <dir>` injects lyrics for tracks the open web doesn't
+  have
 - 🔍 **Vorbis-aware**: detects preexisting plain-text LYRICS (music-metadata doesn't)
 - 🌐 **Two sources, automatic fallback**: LRCLib → lyrics.ovh
 - 📝 **JSONL event log**: every state transition appended for audit
@@ -63,7 +64,7 @@ log:   ~/music/.lyrics-populator.log.jsonl
 deno task populate ~/music --dry-run --limit 20 --concurrency 4 --delay-ms 500
 ```
 
-Reads tags, simulates everything, no file mutation, state shows what *would* happen.
+Reads tags, simulates everything, no file mutation, state shows what _would_ happen.
 
 ### Single file
 
@@ -94,18 +95,18 @@ The directory structure must mirror the archive — `<manual-dir>/<relpath-from-
 
 ### All flags
 
-| Flag | Default | Notes |
-| --- | --- | --- |
-| `--source` | `both` | `lrclib` \| `ovh` \| `both` |
-| `--concurrency` | `4` | Parallel workers |
-| `--delay-ms` | `250` | Base delay between requests with ±50% jitter |
-| `--dry-run` | off | Do not write tags or persist populated state |
-| `--force-overwrite-lyrics` | off | Replace preexisting lyrics |
-| `--keep-synced` | off | Store LRC timestamps in LYRICS (default: plain text only) |
-| `--max-attempts` | `3` | Attempts before `PopulateFailed` |
-| `--limit` | `0` | Process at most N files (debug) |
-| `--manual-lyrics` | (none) | Use `<dir>/<relpath>.txt` as lyrics override |
-| `--verbose` | off | Per-file terminal output |
+| Flag                       | Default | Notes                                                     |
+| -------------------------- | ------- | --------------------------------------------------------- |
+| `--source`                 | `both`  | `lrclib` \| `ovh` \| `both`                               |
+| `--concurrency`            | `4`     | Parallel workers                                          |
+| `--delay-ms`               | `250`   | Base delay between requests with ±50% jitter              |
+| `--dry-run`                | off     | Do not write tags or persist populated state              |
+| `--force-overwrite-lyrics` | off     | Replace preexisting lyrics                                |
+| `--keep-synced`            | off     | Store LRC timestamps in LYRICS (default: plain text only) |
+| `--max-attempts`           | `3`     | Attempts before `PopulateFailed`                          |
+| `--limit`                  | `0`     | Process at most N files (debug)                           |
+| `--manual-lyrics`          | (none)  | Use `<dir>/<relpath>.txt` as lyrics override              |
+| `--verbose`                | off     | Per-file terminal output                                  |
 
 ## Real-world example: 135-file personal archive
 
@@ -164,18 +165,25 @@ After each batch (every 2s or 25 entries), script writes `.lyrics-populator-stat
       "durationSec": 213.5,
       "fileSizeBytes": 3661383,
       "sha256": "abc...",
-      "status": 3,                  // LyricsStatus enum (see below)
+      "status": 3, // LyricsStatus enum (see below)
       "attempts": 1,
       "lastAttemptAt": "...",
       "lastError": null,
       "sourcesTried": [
-        { "source": "lrclib", "at": "...", "ok": true, "matchedTitle": "T", "matchedArtist": "A", "url": "..." }
+        {
+          "source": "lrclib",
+          "at": "...",
+          "ok": true,
+          "matchedTitle": "T",
+          "matchedArtist": "A",
+          "url": "..."
+        }
       ],
       "populatedFrom": {
-        "source": "lrclib",          // or "ovh" or "manual"
+        "source": "lrclib", // or "ovh" or "manual"
         "url": "https://lrclib.net/...",
         "plain": "first 200 chars...",
-        "synced": false              // true if LRC timestamps available
+        "synced": false // true if LRC timestamps available
       }
     }
   }
@@ -184,26 +192,26 @@ After each batch (every 2s or 25 entries), script writes `.lyrics-populator-stat
 
 ### `LyricsStatus` enum
 
-| Value | Name | Meaning |
-| --- | --- | --- |
-| 1 | `NoLyrics` | Will be retried on next run (attempt budget not exhausted) |
-| 2 | `Preexisted` | Already had non-empty lyrics tag — skipped |
-| 3 | `Populated` | Script successfully wrote lyrics |
-| 4 | `PopulateFailed` | Exceeded `--max-attempts` — needs manual intervention |
-| 5 | `SkippedNonAudio` | Reserved |
-| 6 | `DryRunWouldPopulate` | Dry-run mode, would have populated |
-| 7 | `UnsupportedFormat` | Extension not handled for write (e.g. M4A) |
-| 8 | `MissingMetadata` | No title tag — cannot match against any source |
+| Value | Name                  | Meaning                                                    |
+| ----- | --------------------- | ---------------------------------------------------------- |
+| 1     | `NoLyrics`            | Will be retried on next run (attempt budget not exhausted) |
+| 2     | `Preexisted`          | Already had non-empty lyrics tag — skipped                 |
+| 3     | `Populated`           | Script successfully wrote lyrics                           |
+| 4     | `PopulateFailed`      | Exceeded `--max-attempts` — needs manual intervention      |
+| 5     | `SkippedNonAudio`     | Reserved                                                   |
+| 6     | `DryRunWouldPopulate` | Dry-run mode, would have populated                         |
+| 7     | `UnsupportedFormat`   | Extension not handled for write (e.g. M4A)                 |
+| 8     | `MissingMetadata`     | No title tag — cannot match against any source             |
 
 ## How matching works
 
 For each file:
 
 1. Read `artist`, `title` from tags via `music-metadata`.
-2. Normalize title: strip `(feat. X)`, `(Official Video)`, `(Remix)`, etc.
-   Strip artist suffixes: ` - Topic`, `VEVO`. Take first artist before `,`/`&`/`feat`.
-3. **LRCLib primary**: GET `/api/get?artist_name=&track_name=&duration=`.
-   If 404, fallback to `/api/search?q=` and rank by Levenshtein similarity (≥0.6).
+2. Normalize title: strip `(feat. X)`, `(Official Video)`, `(Remix)`, etc. Strip artist suffixes:
+   `- Topic`, `VEVO`. Take first artist before `,`/`&`/`feat`.
+3. **LRCLib primary**: GET `/api/get?artist_name=&track_name=&duration=`. If 404, fallback to
+   `/api/search?q=` and rank by Levenshtein similarity (≥0.6).
 4. **lyrics.ovh fallback** (if `--source both`): GET `/v1/{artist}/{title}`.
 
 Instrumental tracks (LRCLib flag) are correctly skipped — no fake "lyrics" written.
@@ -211,8 +219,8 @@ Instrumental tracks (LRCLib flag) are correctly skipped — no fake "lyrics" wri
 ## How writing works
 
 1. Copy original → `original.tmp.PID.TS`.
-2. **MP3**: `node-id3` writes USLT (plain text lyrics) and SYLT (synced LRC if available)
-   in place, preserving all other ID3v2 frames.
+2. **MP3**: `node-id3` writes USLT (plain text lyrics) and SYLT (synced LRC if available) in place,
+   preserving all other ID3v2 frames.
 3. **Opus/FLAC/OGG**: `ffmpeg -i <tmp> -c copy -metadata LYRICS=<text> <tmp>.out.<ext>`.
 4. Re-parse modified copy with `music-metadata` + raw vorbis scanner.
 5. Verify:
@@ -243,22 +251,22 @@ Even mid-write crashes (OOM, kill, power loss) leave the original file intact.
 
 ### The vorbis-scanner problem
 
-`music-metadata` is the de facto Node/Deno tag reader. But for Opus/FLAC/OGG files,
-it returns empty `lyrics` array when the LYRICS field contains plain text instead of
-LRC timestamp format. This means preexisting lyrics get *overwritten* on the next run.
+`music-metadata` is the de facto Node/Deno tag reader. But for Opus/FLAC/OGG files, it returns empty
+`lyrics` array when the LYRICS field contains plain text instead of LRC timestamp format. This means
+preexisting lyrics get _overwritten_ on the next run.
 
-Solution: 130-line `src/vorbis-scan.ts` parses the OggS stream + vorbis comment block
-directly. Detects LYRICS presence regardless of format. Used as fallback in `readMeta`.
+Solution: 130-line `src/vorbis-scan.ts` parses the OggS stream + vorbis comment block directly.
+Detects LYRICS presence regardless of format. Used as fallback in `readMeta`.
 
 ### Single-instance safety
 
 ```ts
 const lock = new StateLock(stateRoot)
-lock.acquire()  // throws if another instance holds the lock
+lock.acquire() // throws if another instance holds the lock
 ```
 
-Backed by `Deno.FsFile.tryLockSync(true)`. Prevents two runs clobbering each other's
-state files. Tested with concurrent invocations.
+Backed by `Deno.FsFile.tryLockSync(true)`. Prevents two runs clobbering each other's state files.
+Tested with concurrent invocations.
 
 ## Project layout
 
@@ -289,7 +297,8 @@ lyrics-populator/
 
 Direct:
 
-- `jsr:@std/path`, `@std/fs`, `@std/crypto`, `@std/async`, `@std/assert`, `@std/encoding`, `@std/cli`
+- `jsr:@std/path`, `@std/fs`, `@std/crypto`, `@std/async`, `@std/assert`, `@std/encoding`,
+  `@std/cli`
 - `npm:music-metadata@10.6.4` — read tags across formats
 - `npm:node-id3@0.2.9` — write ID3v2 USLT/SYLT
 
@@ -310,30 +319,30 @@ deno fmt --check  # clean
 - **M4A**: not written (would require re-muxing). Treated as `UnsupportedFormat`.
 - **YouTube rips with mjpeg-in-opus**: ffmpeg drops incompatible streams. Audio preserved
   bit-perfectly. Size delta check tolerates up to 25% loss to accommodate this.
-- **LRCLib rate-limit**: ~503s after burst. Default `--concurrency 2 --delay-ms 1500`
-  stays under threshold.
+- **LRCLib rate-limit**: ~503s after burst. Default `--concurrency 2 --delay-ms 1500` stays under
+  threshold.
 - **Preexisting LRC detection**: works for both plain text and `[mm:ss.xx]` formats.
 - **Single-instance**: enforced via `flock`. Concurrent invocations reject the second one.
 
 ## Recovery
 
-| Scenario | Action |
-| --- | --- |
-| File got corrupted mid-write | Shouldn't happen (atomic guarantee), but `git` the audio dir to revert |
-| State file corrupted | `rm .lyrics-populator-state.json` — starts fresh |
-| Want to retry failed files | Just re-run. State tracks attempts, won't exceed `--max-attempts` |
-| Want to retry a specific file | Edit state JSON, set `status: 1, attempts: 0` for that relpath |
-| Want to override lyrics for a track | Use `--manual-lyrics <dir>` with a `<relpath>.txt` file |
+| Scenario                            | Action                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| File got corrupted mid-write        | Shouldn't happen (atomic guarantee), but `git` the audio dir to revert |
+| State file corrupted                | `rm .lyrics-populator-state.json` — starts fresh                       |
+| Want to retry failed files          | Just re-run. State tracks attempts, won't exceed `--max-attempts`      |
+| Want to retry a specific file       | Edit state JSON, set `status: 1, attempts: 0` for that relpath         |
+| Want to override lyrics for a track | Use `--manual-lyrics <dir>` with a `<relpath>.txt` file                |
 
 ## Why this exists
 
-I had ~500 tracks in my personal archive and ~10 had lyrics because I used Kid3 to
-add them manually over years. The other 490 sat there empty. Kid3 doesn't have a
-"look up lyrics for 490 files and write them" feature.
+I had ~500 tracks in my personal archive and ~10 had lyrics because I used Kid3 to add them manually
+over years. The other 490 sat there empty. Kid3 doesn't have a "look up lyrics for 490 files and
+write them" feature.
 
-This script is that feature. LRCLib covers most English/Western tracks. For Russian/
-Ukrainian/niche tracks, the manual override flag lets you drop in lyrics you have
-from Genius/AZLyrics/transcripts without touching code.
+This script is that feature. LRCLib covers most English/Western tracks. For Russian/ Ukrainian/niche
+tracks, the manual override flag lets you drop in lyrics you have from Genius/AZLyrics/transcripts
+without touching code.
 
 ## License
 

@@ -23,12 +23,19 @@ function buildOggWithComment(vendor: string, comments: Record<string, string>): 
   // Build one segment-table entry whose value is body length (< 255 needed).
   const segValues: number[] = []
   let rem = body.length
-  while (rem >= 255) { segValues.push(255); rem -= 255 }
+  while (rem >= 255) {
+    segValues.push(255)
+    rem -= 255
+  }
   segValues.push(rem)
 
   const header = new Uint8Array(27)
-  header[0] = 0x4f; header[1] = 0x67; header[2] = 0x67; header[3] = 0x53
-  header[4] = 0; header[5] = 0
+  header[0] = 0x4f
+  header[1] = 0x67
+  header[2] = 0x67
+  header[3] = 0x53
+  header[4] = 0
+  header[5] = 0
   header[14] = 1 // serial
   header[18] = 1 // page seq
   header[26] = segValues.length

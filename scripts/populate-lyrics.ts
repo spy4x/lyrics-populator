@@ -21,11 +21,7 @@ import { normalize } from "../src/normalize.ts"
 import { fetchLyrics } from "../src/sources/index.ts"
 import { musicbrainzSearchRecording } from "../src/sources/musicbrainz.ts"
 import { coverartarchiveGetFront } from "../src/sources/coverartarchive.ts"
-import {
-  readTags,
-  toTagValues,
-  writeMetadata,
-} from "../src/metadata.ts"
+import { readTags, toTagValues, writeMetadata } from "../src/metadata.ts"
 
 interface CliArgs {
   _: (string | number)[]
@@ -264,7 +260,8 @@ async function processFile(file: ScannedFile): Promise<void> {
 
   // If lyrics are missing and we're not running lyrics-only, fetch metadata
   // first (need it to get releaseMbid for cover art). Otherwise start with lyrics.
-  let lyricsResult: { plain: string; synced: string | null; source: string; url: string } | null = null
+  let lyricsResult: { plain: string; synced: string | null; source: string; url: string } | null =
+    null
   let mbResult: Awaited<ReturnType<typeof musicbrainzSearchRecording>> = null
   let coverResult: Awaited<ReturnType<typeof coverartarchiveGetFront>> = null
 
@@ -291,7 +288,10 @@ async function processFile(file: ScannedFile): Promise<void> {
   }
 
   // 3) Fetch MusicBrainz metadata (Phase 1 fields only: artist/title/album/date/trackNumber/discNumber/genre/composer)
-  if (doMetadata && (file.ext === "mp3" || file.ext === "opus" || file.ext === "flac" || file.ext === "ogg")) {
+  if (
+    doMetadata &&
+    (file.ext === "mp3" || file.ext === "opus" || file.ext === "flac" || file.ext === "ogg")
+  ) {
     mbResult = await musicbrainzSearchRecording({
       artist: norm.artist,
       title: norm.title,
@@ -339,8 +339,7 @@ async function processFile(file: ScannedFile): Promise<void> {
   }
 
   // If nothing to write, treat as preexisting (all enabled fields already populated)
-  const hasNothingToWrite =
-    writePayload.artist === undefined &&
+  const hasNothingToWrite = writePayload.artist === undefined &&
     writePayload.album === undefined &&
     writePayload.title === undefined &&
     writePayload.albumArtist === undefined &&
@@ -362,7 +361,14 @@ async function processFile(file: ScannedFile): Promise<void> {
   }
 
   if (args["dry-run"]) {
-    const newFields = buildFieldsFromPayload(existing?.fields ?? defaultFields(), writePayload, mbResult, coverResult, lyricsResult, manualLyrics !== null)
+    const newFields = buildFieldsFromPayload(
+      existing?.fields ?? defaultFields(),
+      writePayload,
+      mbResult,
+      coverResult,
+      lyricsResult,
+      manualLyrics !== null,
+    )
     updateEntry(file, sha, tagVals, {
       status: LyricsStatus.DryRunWouldPopulate,
       attempts: (existing?.attempts ?? 0) + 1,
@@ -452,7 +458,18 @@ function buildFieldsFromPayload(
   if (mbResult) {
     const f = mbResult.fields
     const score = mbResult.matchedScore
-    for (const field of ["artist", "album", "albumArtist", "date", "trackNumber", "discNumber", "genre", "composer"] as const) {
+    for (
+      const field of [
+        "artist",
+        "album",
+        "albumArtist",
+        "date",
+        "trackNumber",
+        "discNumber",
+        "genre",
+        "composer",
+      ] as const
+    ) {
       if (f[field] !== undefined) {
         out[field] = {
           status: "fetched",

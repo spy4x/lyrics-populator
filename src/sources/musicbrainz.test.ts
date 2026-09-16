@@ -122,9 +122,7 @@ Deno.test("musicbrainzSearchRecording prefers Album over Single", async () => {
 })
 
 Deno.test("musicbrainzSearchRecording returns null when no hits", async () => {
-  stubFetch(() =>
-    new Response(JSON.stringify({ recordings: [] }), { status: 200 })
-  )
+  stubFetch(() => new Response(JSON.stringify({ recordings: [] }), { status: 200 }))
   const r = await musicbrainzSearchRecording({ artist: "X", title: "Y" })
   assertEquals(r, null)
 })
