@@ -1,6 +1,8 @@
 import { assert, assertEquals, assertExists } from "@std/assert"
 import { join } from "@std/path"
 import {
+  defaultFields,
+  defaultTagValues,
   emptyState,
   JsonlLogger,
   loadState,
@@ -16,7 +18,7 @@ import {
 
 Deno.test("emptyState initializes defaults", () => {
   const s = emptyState("/tmp/test")
-  assertEquals(s.version, 1)
+  assertEquals(s.version, 2)
   assertEquals(s.entries, {})
   assertEquals(s.totalSeen, 0)
   assertExists(s.createdAt)
@@ -52,6 +54,8 @@ Deno.test("StateSaver atomic save and reload", async () => {
       lastError: null,
       sourcesTried: [],
       populatedFrom: { source: "lrclib", url: "https://x", plain: "p", synced: false },
+      tags: defaultTagValues(),
+      fields: defaultFields(),
     }
     const saver = new StateSaver(s, tmp)
     saver.markDirty()
@@ -137,4 +141,95 @@ Deno.test("path helpers", () => {
   assert(statePathFor(tmp).endsWith(".lyrics-populator-state.json"))
   assert(lockPathFor(tmp).endsWith(".lyrics-populator.lock"))
   assert(logPathFor(tmp).endsWith(".lyrics-populator.log.jsonl"))
+})
+
+Deno.test("loadState migrates v1 to v2", async () => {
+  const tmp = await Deno.makeTempDir()
+  try {
+    const v1 = {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      targetPath: tmp,
+      totalSeen: 1,
+      entries: {
+        "track.mp3": {
+          relpath: "track.mp3",
+          absPath: join(tmp, "track.mp3"),
+          ext: "mp3",
+          artist: "Artist",
+          title: "Title",
+          album: "Album",
+          durationSec: 180,
+          fileSizeBytes: 1000,
+          sha256: "abc",
+          status: 3, // Populated
+          attempts: 1,
+          lastAttemptAt: new Date().toISOString(),
+          lastError: null,
+          sourcesTried: [],
+          populatedFrom: {
+            source: "lrclib",
+            url: "https://lrclib.net/x",
+            plain: "lyrics text",
+            synced: false,
+          },
+        },
+      },
+    }
+    const path = statePathFor(tmp)
+    Deno.writeTextFileSync(path, JSON.stringify(v1))
+    const loaded = loadState(tmp)
+    assertEquals(loaded.version, 2)
+    const e = loaded.entries["track.mp3"]
+    assertEquals(e.populatedFrom?.source, "lrclib") // legacy field preserved
+    assertExists(e.fields)
+    assertEquals(e.fields.lyrics.status, "fetched")
+    assertEquals(e.fields.lyrics.source, "lrclib")
+    assertEquals(e.fields.lyrics.url, "https://lrclib.net/x")
+    assertEquals(e.tags.album, "Album")
+    assertEquals(e.tags.artist, "Artist")
+  } finally {
+    await Deno.remove(tmp, { recursive: true })
+  }
+})
+
+Deno.test("loadState migrates v1 PopulateFailed correctly", async () => {
+  const tmp = await Deno.makeTempDir()
+  try {
+    const v1 = {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      targetPath: tmp,
+      totalSeen: 1,
+      entries: {
+        "track.opus": {
+          relpath: "track.opus",
+          absPath: join(tmp, "track.opus"),
+          ext: "opus",
+          artist: "",
+          title: "Track",
+          album: "",
+          durationSec: 0,
+          fileSizeBytes: 1000,
+          sha256: "def",
+          status: 4, // PopulateFailed
+          attempts: 3,
+          lastAttemptAt: new Date().toISOString(),
+          lastError: "no result",
+          sourcesTried: [],
+          populatedFrom: null,
+        },
+      },
+    }
+    Deno.writeTextFileSync(statePathFor(tmp), JSON.stringify(v1))
+    const loaded = loadState(tmp)
+    const e = loaded.entries["track.opus"]
+    assertEquals(e.fields.lyrics.status, "fetch-failed")
+    assertEquals(e.fields.lyrics.attempts, 3)
+    assertEquals(e.fields.lyrics.lastError, "no result")
+  } finally {
+    await Deno.remove(tmp, { recursive: true })
+  }
 })

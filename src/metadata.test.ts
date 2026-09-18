@@ -19,13 +19,22 @@ Deno.test("writeLyrics populates Opus file", async () => {
   ]
   let src = ""
   for (const c of candidates) {
-    try { await Deno.stat(c) } catch { continue }
+    try {
+      await Deno.stat(c)
+    } catch {
+      continue
+    }
     const tmpTry = await Deno.makeTempFile({ suffix: ".opus" })
     try {
       await Deno.copyFile(c, tmpTry)
       const ly = scanOggComments(await Deno.readFile(tmpTry)).fields["LYRICS"]
-      if (!ly) { src = c; break }
-    } finally { await Deno.remove(tmpTry).catch(() => {}) }
+      if (!ly) {
+        src = c
+        break
+      }
+    } finally {
+      await Deno.remove(tmpTry).catch(() => {})
+    }
   }
   if (!src) {
     console.log("SKIP: no candidate opus without preexisting lyrics")
@@ -90,13 +99,22 @@ Deno.test("readMeta detects preexisting Opus lyrics via vorbis fallback", async 
   ]
   let src = ""
   for (const c of candidates) {
-    try { await Deno.stat(c) } catch { continue }
+    try {
+      await Deno.stat(c)
+    } catch {
+      continue
+    }
     const tmpTry = await Deno.makeTempFile({ suffix: ".opus" })
     try {
       await Deno.copyFile(c, tmpTry)
       const ly = scanOggComments(await Deno.readFile(tmpTry)).fields["LYRICS"]
-      if (!ly) { src = c; break }
-    } finally { await Deno.remove(tmpTry).catch(() => {}) }
+      if (!ly) {
+        src = c
+        break
+      }
+    } finally {
+      await Deno.remove(tmpTry).catch(() => {})
+    }
   }
   if (!src) {
     console.log("SKIP: no candidate opus without preexisting lyrics")
